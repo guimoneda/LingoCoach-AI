@@ -1,0 +1,5 @@
+{
+  "name": "LingoCoach AI",
+  "description": "Improve your English fluency and pronunciation with real-time AI feedback.",
+  "requestFramePermissions": ["microphone"]
+}

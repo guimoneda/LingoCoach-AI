@@ -1,0 +1,81 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ===============================================================
+    // Primitives
+    // ===============================================================
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // ===============================================================
+    // Validation Blueprints
+    // ===============================================================
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt']) &&
+             data.keys().size() >= 3 && data.keys().size() <= 6 &&
+             data.uid == request.auth.uid &&
+             data.email is string && data.email.size() <= 256 &&
+             data.createdAt == request.time &&
+             (data.get('displayName', '') is string && data.get('displayName', '').size() <= 128) &&
+             (data.get('photoURL', '') is string && data.get('photoURL', '').size() <= 1024);
+    }
+
+    function isValidEvaluation(data) {
+      return data.keys().hasAll(['userId', 'transcription', 'fluencyScore', 'createdAt', 'pronunciationTips', 'grammarFeedback', 'vocabularyFeedback', 'overallFeedback']) &&
+             data.keys().size() >= 8 && data.keys().size() <= 10 &&
+             data.userId == request.auth.uid &&
+             data.transcription is string && data.transcription.size() <= 5000 &&
+             data.fluencyScore is number && data.fluencyScore >= 0 && data.fluencyScore <= 100 &&
+             data.createdAt == request.time &&
+             data.pronunciationTips is list && data.pronunciationTips.size() <= 50 &&
+             data.grammarFeedback is string && data.grammarFeedback.size() <= 2000 &&
+             data.vocabularyFeedback is string && data.vocabularyFeedback.size() <= 2000 &&
+             data.overallFeedback is string && data.overallFeedback.size() <= 2000 &&
+             (data.get('vocabularySuggestions', []) is list && data.get('vocabularySuggestions', []).size() <= 20);
+    }
+
+    // ===============================================================
+    // Collections
+    // ===============================================================
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn() && request.auth.uid == userId && isValidUser(incoming());
+      allow update: if isSignedIn() && request.auth.uid == userId && isValidUser(incoming()) &&
+                      incoming().uid == existing().uid &&
+                      incoming().createdAt == existing().createdAt &&
+                      incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'email']);
+    }
+
+    match /evaluations/{evaluationId} {
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow get: if isSignedIn() && isValidId(evaluationId) && resource.data.userId == request.auth.uid;
+      
+      allow create: if isSignedIn() && isValidEvaluation(incoming());
+      
+      allow update: if false;
+      
+      allow delete: if isSignedIn() && isValidId(evaluationId) && resource.data.userId == request.auth.uid;
+    }
+  }
+}

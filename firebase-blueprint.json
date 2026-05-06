@@ -1,0 +1,73 @@
+{
+  "entities": {
+    "Evaluation": {
+      "title": "Evaluation",
+      "description": "A speech evaluation result for a user.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The UID of the user who performed the evaluation."
+        },
+        "transcription": {
+          "type": "string",
+          "description": "The transcribed text of the speech."
+        },
+        "fluencyScore": {
+          "type": "number",
+          "description": "The fluency score from 0 to 100."
+        },
+        "pronunciationTips": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "word": { "type": "string" },
+              "tip": { "type": "string" },
+              "phonetic": { "type": "string" }
+            },
+            "required": ["word", "tip"]
+          }
+        },
+        "grammarFeedback": {
+          "type": "string"
+        },
+        "vocabularyFeedback": {
+          "type": "string"
+        },
+        "overallFeedback": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the evaluation was created."
+        }
+      },
+      "required": ["userId", "transcription", "fluencyScore", "createdAt"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile information.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    }
+  },
+  "firestore": {
+    "/evaluations/{evaluationId}": {
+      "schema": "Evaluation",
+      "description": "Collection of speech evaluations."
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile documents."
+    }
+  }
+}
